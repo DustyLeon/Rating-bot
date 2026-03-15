@@ -28,7 +28,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS votes (
       message_id TEXT    NOT NULL,
       user_id    TEXT    NOT NULL,
-      score      INTEGER NOT NULL CHECK (score BETWEEN 1 AND 10),
+      score      INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
       PRIMARY KEY (message_id, user_id)
     )
   `);
@@ -36,26 +36,25 @@ async function initDb() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+const BUTTON_STYLES = {
+  1: ButtonStyle.Danger,
+  2: ButtonStyle.Danger,
+  3: ButtonStyle.Secondary,
+  4: ButtonStyle.Success,
+  5: ButtonStyle.Success,
+};
+
 function buildButtons(messageId) {
-  const row1 = new ActionRowBuilder();
-  const row2 = new ActionRowBuilder();
+  const row = new ActionRowBuilder();
   for (let i = 1; i <= 5; i++) {
-    row1.addComponents(
+    row.addComponents(
       new ButtonBuilder()
         .setCustomId(`rate_${messageId}_${i}`)
         .setLabel(`${i}`)
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(BUTTON_STYLES[i])
     );
   }
-  for (let i = 6; i <= 10; i++) {
-    row2.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rate_${messageId}_${i}`)
-        .setLabel(`${i}`)
-        .setStyle(ButtonStyle.Secondary)
-    );
-  }
-  return [row1, row2];
+  return [row];
 }
 
 async function buildContent(messageId) {
@@ -64,11 +63,11 @@ async function buildContent(messageId) {
     [messageId]
   );
   if (rows.length === 0) {
-    return '**Rate this track (1–10):**\nNo votes yet — be the first!';
+    return '**Rate this track (1–5):**\nNo votes yet — be the first!';
   }
   const scores = rows.map(r => r.score);
   const avg    = scores.reduce((a, b) => a + b, 0) / scores.length;
-  return `**Rate this track (1–10):**\n⭐ Average: **${avg.toFixed(2)} / 10** · **${scores.length}** vote${scores.length === 1 ? '' : 's'}`;
+  return `**Rate this track (1–5):**\n⭐ Average: **${avg.toFixed(2)} / 5** · **${scores.length}** vote${scores.length === 1 ? '' : 's'}`;
 }
 
 // ── Discord client ────────────────────────────────────────────────────────────
@@ -110,7 +109,7 @@ client.on('interactionCreate', async (interaction) => {
   const score     = parseInt(parts[parts.length - 1], 10);
   const messageId = parts.slice(1, -1).join('_');
 
-  if (isNaN(score) || score < 1 || score > 10) return;
+  if (isNaN(score) || score < 1 || score > 5) return;
 
   try {
     await pool.query(
