@@ -2,8 +2,8 @@ const {
   Client,
   GatewayIntentBits,
   ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
 } = require('discord.js');
 const { Pool } = require('pg');
 
@@ -28,7 +28,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS votes (
       message_id TEXT    NOT NULL,
       user_id    TEXT    NOT NULL,
-      score      INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+      score      INTEGER NOT NULL CHECK (score BETWEEN 1 AND 10),
       PRIMARY KEY (message_id, user_id)
     )
   `);
@@ -36,25 +36,19 @@ async function initDb() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const BUTTON_STYLES = {
-  1: ButtonStyle.Danger,
-  2: ButtonStyle.Danger,
-  3: ButtonStyle.Secondary,
-  4: ButtonStyle.Success,
-  5: ButtonStyle.Success,
-};
-
-function buildButtons(messageId) {
-  const row = new ActionRowBuilder();
-  for (let i = 1; i <= 5; i++) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`rate_${messageId}_${i}`)
-        .setLabel(`${i}`)
-        .setStyle(BUTTON_STYLES[i])
+function buildMenu(messageId) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`rate_${messageId}`)
+    .setPlaceholder('Rate this track (1–10)')
+    .addOptions(
+      Array.from({ length: 10 }, (_, i) => {
+        const score = i + 1;
+        return new StringSelectMenuOptionBuilder()
+          .setLabel(`${score}`)
+          .setValue(`${score}`);
+      })
     );
-  }
-  return [row];
+  return [new ActionRowBuilder().addComponents(menu)];
 }
 
 async function buildContent(messageId) {
@@ -63,11 +57,11 @@ async function buildContent(messageId) {
     [messageId]
   );
   if (rows.length === 0) {
-    return '**Rate this track (1–5):**\nNo votes yet — be the first!';
+    return 'No votes yet — be the first!';
   }
   const scores = rows.map(r => r.score);
   const avg    = scores.reduce((a, b) => a + b, 0) / scores.length;
-  return `**Rate this track (1–5):**\n⭐ Average: **${avg.toFixed(2)} / 5** · **${scores.length}** vote${scores.length === 1 ? '' : 's'}`;
+  return `⭐ Average: **${avg.toFixed(2)} / 10** · **${scores.length}** vote${scores.length === 1 ? '' : 's'}`;
 }
 
 // ── Discord client ────────────────────────────────────────────────────────────
@@ -91,25 +85,23 @@ client.on('messageCreate', async (message) => {
 
   try {
     const content    = await buildContent(message.id);
-    const components = buildButtons(message.id);
+    const components = buildMenu(message.id);
     await message.reply({ content, components });
   } catch (err) {
     console.error('Failed to post rating prompt:', err);
   }
 });
 
-// Button click → upsert vote, update the rating message in place
+// Select menu interaction → upsert vote, update the rating message in place
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
+  if (!interaction.isStringSelectMenu()) return;
   if (!interaction.customId.startsWith('rate_')) return;
 
-  // Custom ID format: rate_{messageId}_{score}
-  // messageId is a Discord snowflake (all digits), so splitting from the right is unambiguous.
-  const parts     = interaction.customId.split('_');
-  const score     = parseInt(parts[parts.length - 1], 10);
-  const messageId = parts.slice(1, -1).join('_');
+  // Custom ID format: rate_{messageId}
+  const messageId = interaction.customId.slice(5);
+  const score     = parseInt(interaction.values[0], 10);
 
-  if (isNaN(score) || score < 1 || score > 5) return;
+  if (isNaN(score) || score < 1 || score > 10) return;
 
   try {
     await pool.query(
@@ -121,11 +113,10 @@ client.on('interactionCreate', async (interaction) => {
     );
 
     const content    = await buildContent(messageId);
-    const components = buildButtons(messageId);
+    const components = buildMenu(messageId);
     await interaction.update({ content, components });
   } catch (err) {
     console.error('Failed to record vote:', err);
-    // Acknowledge the interaction silently so Discord doesn't show "interaction failed"
     await interaction.deferUpdate().catch(() => {});
   }
 });
