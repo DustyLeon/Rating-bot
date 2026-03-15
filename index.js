@@ -28,16 +28,16 @@ if (!DISCORD_TOKEN || !CHANNEL_ID || !DATABASE_URL || !CLIENT_ID || !GUILD_ID) {
 
 // ── Ranks ─────────────────────────────────────────────────────────────────────
 const RANKS = [
-  { level: 1,  name: 'Listener',        xp: 10  },
-  { level: 2,  name: 'Scout',           xp: 40  },
-  { level: 3,  name: 'Rater',           xp: 70  },
-  { level: 4,  name: 'Selector',        xp: 100 },
-  { level: 5,  name: 'Archivist',       xp: 130 },
-  { level: 6,  name: 'Tastemaker',      xp: 160 },
-  { level: 7,  name: 'Esteemed Critic', xp: 190 },
-  { level: 8,  name: 'Shrewd Advisor',  xp: 220 },
-  { level: 9,  name: 'Resident Expert', xp: 250 },
-  { level: 10, name: 'Master Curator',  xp: 300 },
+  { level: 1,  name: 'Scout',             xp: 10  },
+  { level: 2,  name: 'Engaged Listener',  xp: 40  },
+  { level: 3,  name: 'Music Buff',        xp: 70  },
+  { level: 4,  name: 'Critic',            xp: 100 },
+  { level: 5,  name: 'Archivist',         xp: 130 },
+  { level: 6,  name: 'Tastemaker',        xp: 160 },
+  { level: 7,  name: 'Esteemed Critic',   xp: 190 },
+  { level: 8,  name: 'Shrewd Advisor',    xp: 220 },
+  { level: 9,  name: 'Resident Expert',   xp: 250 },
+  { level: 10, name: 'Master Curator',    xp: 300 },
 ];
 
 function getLevelForXp(xp) {
@@ -262,7 +262,7 @@ client.on('interactionCreate', async (interaction) => {
       // Public level-up announcement
       if (xpResult?.leveled_up) {
         const rankName = getRankName(xpResult.new_level);
-        await channel.send(`🏆 <@${interaction.user.id}> just reached **${rankName}**!`);
+        await channel.send(`🏆 <@${interaction.user.id}> just reached the rank of **${rankName}**!`);
       }
 
     } catch (err) {
