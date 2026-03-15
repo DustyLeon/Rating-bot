@@ -252,7 +252,7 @@ client.on('interactionCreate', async (interaction) => {
         const next     = getNextRank(level);
         confirmation += xpResult.leveled_up
           ? `\n+10 XP · You leveled up to **${rankName}**! 🎉`
-          : `\n+10 XP · **${rankName}** · ${xp} XP${next ? ` (${next.xp - xp} XP to next rank)` : ''}`;
+          : `\n+10 XP · **${rankName}** · ${xp} XP`;
       } else {
         confirmation += '\nVote updated — no XP for changes.';
       }
@@ -296,7 +296,6 @@ client.on('interactionCreate', async (interaction) => {
         { name: 'XP',    value: `${xp}`,      inline: true },
       )
       .setColor(0x5865F2);
-    if (next) embed.setFooter({ text: `${next.xp - xp} XP to next rank` });
     await interaction.reply({ embeds: [embed], ephemeral: true });
     return;
   }
