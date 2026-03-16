@@ -196,7 +196,7 @@ client.on('messageCreate', async (message) => {
   try {
     const content    = await buildContent(message.id);
     const components = buildButton(message.id);
-    await message.reply({ content, components });
+    await message.reply({ content, components, flags: 4096 });
   } catch (err) {
     console.error('Failed to post rate button:', err);
   }
