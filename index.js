@@ -17,6 +17,8 @@ const { Pool } = require('pg');
 // ── Config ────────────────────────────────────────────────────────────────────
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID    = process.env.CHANNEL_ID;
+const SECOND_CHANNEL_ID = process.env.SECOND_CHANNEL_ID; // Optional second ratings channel
+const CHANNEL_IDS = new Set([CHANNEL_ID, SECOND_CHANNEL_ID].filter(Boolean));
 const DATABASE_URL  = process.env.DATABASE_URL;
 const CLIENT_ID     = process.env.CLIENT_ID;
 const GUILD_ID      = process.env.GUILD_ID;
@@ -101,6 +103,17 @@ async function registerCommands() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+// Only attach ratings to posts containing a web link. Also accept a link in an
+// embed, since automated feed posts sometimes put their links there.
+function containsWebLink(message) {
+  const urlPattern = /(?:https?:\/\/|www\.)[^\s<>]+/i;
+  if (urlPattern.test(message.content || '')) return true;
+  return message.embeds.some(embed =>
+    [embed.url, embed.description, ...(embed.fields || []).map(field => field.value)]
+      .some(value => typeof value === 'string' && urlPattern.test(value))
+  );
+}
+
 function buildButton(messageId) {
   const button = new ButtonBuilder()
     .setCustomId(`open_modal_${messageId}`)
@@ -188,10 +201,11 @@ client.once('ready', async () => {
   await registerCommands();
 });
 
-// New message → attach rate button
+// New linked submission in either enabled channel → attach rate button
 client.on('messageCreate', async (message) => {
-  if (message.channelId !== CHANNEL_ID) return;
+  if (!CHANNEL_IDS.has(message.channelId)) return;
   if (message.author.id === client.user.id) return;
+  if (!containsWebLink(message)) return;
 
   try {
     const content    = await buildContent(message.id);
@@ -238,7 +252,7 @@ client.on('interactionCreate', async (interaction) => {
       );
 
       // Update the rating message
-      const channel      = await client.channels.fetch(CHANNEL_ID);
+      const channel      = await client.channels.fetch(interaction.channelId);
       const replyMessage = await channel.messages.fetch(interaction.message.id);
       const content      = await buildContent(messageId);
       await replyMessage.edit({ content, components: buildButton(messageId) });
