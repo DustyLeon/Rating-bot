@@ -273,12 +273,6 @@ client.on('interactionCreate', async (interaction) => {
 
       await interaction.reply({ content: confirmation, ephemeral: true });
 
-      // Public level-up announcement
-      if (xpResult?.leveled_up) {
-        const rankName = getRankName(xpResult.new_level);
-        await channel.send(`🏆 <@${interaction.user.id}> just reached the rank of **${rankName}**!`);
-      }
-
     } catch (err) {
       console.error('Failed to record vote:', err);
       await interaction.reply({
